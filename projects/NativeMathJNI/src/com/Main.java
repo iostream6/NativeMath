@@ -1,7 +1,5 @@
 /*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
+ * 2018.05.01  - Created
  */
 package com;
 
@@ -15,7 +13,6 @@ import sun.misc.Unsafe;
  * @author Ilamah, Osho
  */
 public class Main {
-
     //private final static Logger LOGGER = Logger.getLogger(Matrix.class.getName());
     static {
         try {
@@ -41,7 +38,9 @@ public class Main {
         // TODO code application logic here
         //testCreate(); passing
         
-        readMatrix();
+        //testReadMatrix();
+        
+        testSparseSymmetricEigs();
     }
 
     public static void testCreate() {
@@ -111,7 +110,7 @@ public class Main {
                 unsafe.putInt(rowPointerBaseAddress, rowptr[8]);
                 sm.print(18);
             } catch (Exception ex) {
-                System.out.println("ERRORO IN SSSMatrix set\n");
+                System.out.println("ERROR IN SSSMatrix set\n");
                 ex.printStackTrace();
             }
             sm.destroy();
@@ -121,16 +120,26 @@ public class Main {
         }
     }
 
-    public static void readMatrix(){
-        final String filename = "X:\\delete\\x\\Ragusa16\\LFAT5.mtx";
+    public static void testReadMatrix(){
+        //final String filename = "X:\\delete\\x\\Ragusa16\\LFAT5.mtx";
+        final String filename = "/media/MERCURY/Samba/DEL/LFAT5.mtx";
         COOMatrix cooMatrix = MatrixDataProvider.readMatrixMarketFile(filename);
         if(cooMatrix == null){
             System.out.println("Read COO Matrix FAILED!!");
         }
         final Matrix.DenseMatrix dm = MatrixDataProvider.getDenseMatrix(cooMatrix);
+        final Matrix.SSSMatrix sm = MatrixDataProvider.getSSSMatrix(cooMatrix);
+        
         dm.print(14, 14);
+        sm.print(30);
         dm.destroy();
-        System.out.println("Hi Sultan");
+        sm.destroy();
+        
+        System.out.println("readMatrix passed, please check the printed entries!!");
     }
 
+    
+    public static void testSparseSymmetricEigs(){
+        
+    }
 }
