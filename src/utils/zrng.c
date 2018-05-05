@@ -18,7 +18,7 @@
  * @param jcong the seed, which is updated on each call.
  * @return  the seed new value.
  */
-uint32_t CONG_PRNG(uint32_t *jcong) {
+uint32_t CONG_PRNG(uint32_t* jcong) {
     *jcong = 69069 * (*jcong) + 1234567;
     return *jcong;
 }
@@ -37,7 +37,7 @@ double cpu_time() {
  * @param z an input seed which is updated on each call
  * @return  the new MWC random value
  */
-uint32_t MWC_PRNG(uint32_t *w, uint32_t *z) {
+uint32_t MWC_PRNG(uint32_t* w, uint32_t* z) {
     *z = 36969 * (*z & 65535) + (*z >> 16);
     *w = 18000 * (*w & 65535) + (*w >> 16);
     return (*z << 16) + *w;
@@ -49,7 +49,7 @@ uint32_t MWC_PRNG(uint32_t *w, uint32_t *z) {
  * @param jsr the seed, which is updated on each call
  * @return the new SHR3 random integer value
  */
-uint32_t SHR3_PRNG(uint32_t *jsr) {
+uint32_t SHR3_PRNG(uint32_t* jsr) {
     uint32_t value = *jsr;
     *jsr ^= *jsr << 13;
     *jsr ^= *jsr >> 17;
@@ -67,7 +67,7 @@ uint32_t SHR3_PRNG(uint32_t *jsr) {
  * @param z an input seed which is updated on each call
  * @return the new KISS random value
  */
-uint32_t KISS99_PRNG(uint32_t *jcong, uint32_t *jsr, uint32_t *w, uint32_t *z) {
+uint32_t KISS99_PRNG(uint32_t* jcong, uint32_t* jsr, uint32_t* w, uint32_t* z) {
     return (MWC_PRNG(w, z) ^ CONG_PRNG(jcong)) +SHR3_PRNG(jsr);
 }
 
@@ -77,7 +77,7 @@ uint32_t KISS99_PRNG(uint32_t *jcong, uint32_t *jsr, uint32_t *w, uint32_t *z) {
  * @param jsr the seed
  * @return 
  */
-float r4_uni(uint32_t *jsr) {
+float r4_uni(uint32_t* jsr) {
     float value;
     uint32_t jsr_input = *jsr;
     *jsr ^= *jsr << 13;

@@ -19,11 +19,12 @@
 #include "../headers/external/xalloc.h"
 
 //Qc'ed (except for CSR)
+
 int sym_eigen_solve(const SSSMatrix* sss_sym, const CSRMatrix* csr_sym, const Matrix* dense_sym, const uint32_t threads, const uint32_t k,
         EigenOrder order, EigenSolverMode mode, Vector** eigenValues, Matrix** eigenVectors) {
 
     const uint32_t NUM_THREADS = max(1, threads);
-    char* solve_message = "\n\tARPACK_DRIVER->SYMMETRIC EIGS with %s input\n";
+    char* solve_message = "\nARPACK_DRIVER->SYMMETRIC EIGS with %s input\n";
     //sanity checks - e.g rows = cols
     //
     int ido = 0; // must be zero on first call

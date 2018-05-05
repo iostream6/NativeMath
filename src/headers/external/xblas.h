@@ -5,6 +5,8 @@
 /* 
  * File:   xblas.h
  * Author: Ilamah, Osho
+ * 
+ * Provides driver/interface to system optimised BLAS functions (OPENBLAS and MKL backends), as well as custom BLAS routines (e.g. spMVx) 
  *
  * Created on 15 April 2018, 18:30
  */

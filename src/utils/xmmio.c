@@ -1,5 +1,5 @@
 /* 
- * File:   io_driver.c
+ * File:   xmmio.c
  * Author: Ilamah, Osho
  *
  * Created on 17 April 2018, 09:18
@@ -23,7 +23,12 @@ CSRMatrix* coo_to_csr(const COOMatrix* coo_matrix);
 void print_coo_matrix(const COOMatrix* m, const uint32_t n);
 void sort_row_by_column(uint32_t* col_idx, double* a, int start, int end);
 
-//loads data from matrix market format file into matrix structure - supports dense and sparse MM data 
+/**
+ * Reads data from matrix market formatted text file into Matrix data structure. Both dense and sparse matrix market files can be read.
+ * 
+ * @param filename the absolute path to the input file
+ * @return a Matrix structure containing the input data if successful, otherwise NULL
+ */
 //QC'ed
 
 Matrix* load_mm_matrix(const char* filename) {
@@ -122,10 +127,16 @@ Matrix* load_mm_matrix(const char* filename) {
             return NULL;
         }
         return matrix;
-    } 
+    }
 }
 
-//loads data from matrix market format file into csr matrix structure
+/**
+ * Reads data from matrix market formatted text file into CSRMatrix data structure. Only sparse, non-symmetric matrix market input data is supported. If sparse symmetric input is required, please use the Matrix and SSSMatrix structure and associated 
+ * read methods instead.
+ * 
+ * @param filename the absolute path to the input file
+ * @return  a CSRMatrix structure containing the input data if successful, otherwise NULL
+ */
 //QC'ed
 
 CSRMatrix* load_mm_csrmatrix(char* filename) {
@@ -150,8 +161,13 @@ CSRMatrix* load_mm_csrmatrix(char* filename) {
     return csr_matrix;
 }
 
-//loads data from matrix market format file into sss matrix structure
-
+/**
+ * Reads data from matrix market formatted text file into SSSMatrix data structure. Only sparse, symmetric matrix market input data is supported. If sparse NON-symmetric input is required, please use the Matrix and CSRMatrix structure and associated 
+ * read methods instead.
+ * 
+ * @param filename the absolute path to the input file
+ * @return  a SSSMatrix structure containing the input data if successful, otherwise NULL
+ */
 SSSMatrix* load_mm_ssmatrix(char* filename) {
     MM_typecode typecode;
     COOMatrix* coo_matrix = load_coo_matrix(filename, &typecode);
@@ -244,52 +260,33 @@ SSSMatrix* load_mm_ssmatrix(char* filename) {
     return sss_matrix;
 }
 
-/**
- * Loads data from a proprietary binary file into a matrix (see matlab scripts that do this; Format = int m, int n, int symmteric (added 04/2018), row major double data). 
- * @param fname pointer to the file name
- * @return A matrix containing the data in the file
- */
-Matrix * matrix_load_from_binary_file(char *fname) {
-    int i, j, num_rows, num_columns, sym;
-    double nnz_val;
-    size_t one = 1;
-    FILE *fp;
-    Matrix *M;
-    fp = fopen(fname, "rb"); //IO added "b" behind r, see http://stackoverflow.com/questions/2307057/how-to-read-a-binary-file-in-c-video-images-or-text
-    fread(&num_rows, sizeof (int), one, fp); //read m
-    fread(&num_columns, sizeof (int), one, fp); //read n
-    fread(&sym, sizeof (int), one, fp); //read symmetric, (added 04/2018)
-    printf("Initializing M of size %d by %d from %s", num_rows, num_columns, fname);
-    M = create_matrix(num_rows, num_columns, sym == 1);
-    // read and set elements
-    for (i = 0; i < num_rows; i++) {
-        for (j = 0; j < num_columns; j++) {
-            fread(&nnz_val, sizeof (double), one, fp); //read nnz
-            set_matrix_element(M, i, j, nnz_val);
-        }
-    }
-    fclose(fp);
-    printf(" . . . .ok!\n");
-    return M;
-}
-
 /* ****************************************************************************
- * 
- * 
+ *                     INTERBAL (PRIVATE) ROUTINES
+ *                     INTERBAL (PRIVATE) ROUTINES
+ *                     INTERBAL (PRIVATE) ROUTINES 
  * ***************************************************************************
+ */
+
+
+/**
+ * Sorts the subset of packed column index buffer, corresponding to elements of a sparse matrix row, and the associated element values in the packed values buffer, in natural order
+ * @param col_idx the column index buffer
+ * @param a the packed values buffers
+ * @param start offset into the column buffer at which the row entries begin
+ * @param end offset into the column buffer at which the row entries end
  */
 //QC'ed
 
-void sort_row_by_column(uint32_t* col_idx, double* a, int start, int end) {
+void sort_row_by_column(uint32_t* col_idx, double* values, int start, int end) {
     int i, j, it;
     double dt;
     for (i = end - 1; i > start; i--) {
         for (j = start; j < i; j++) {
             if (col_idx[j] > col_idx[j + 1]) {
-                if (a) {
-                    dt = a[j];
-                    a[j] = a[j + 1];
-                    a[j + 1] = dt;
+                if (values) {
+                    dt = values[j];
+                    values[j] = values[j + 1];
+                    values[j + 1] = dt;
                 }
                 it = col_idx[j];
                 col_idx[j] = col_idx[j + 1];
@@ -299,6 +296,14 @@ void sort_row_by_column(uint32_t* col_idx, double* a, int start, int end) {
     }
 }
 
+
+/**
+ * Allocates memory for a co-ordinate format matrix data structure
+ * @param nrows the total number of rows in the matrix
+ * @param ncols the total number of cols in the matrix
+ * @param nnz the total number of non-zero entries in the matrix
+ * @return A pointer to a COOMatrix data structure with sufficient backing memory to hold the specified matrix
+ */
 //QC'ed
 
 COOMatrix* create_coomatrix(uint32_t nrows, uint32_t ncols, uint32_t nnz) {
@@ -318,6 +323,11 @@ COOMatrix* create_coomatrix(uint32_t nrows, uint32_t ncols, uint32_t nnz) {
     return m;
 }
 
+
+/**
+ * Frees memory for a co-ordinate format matrix data structure
+ * @param matrix pointer to the COOMatrix to be freed
+ */
 //QC'ed
 
 void coomatrix_delete(COOMatrix* matrix) {
@@ -326,11 +336,20 @@ void coomatrix_delete(COOMatrix* matrix) {
         aligned_free(matrix->row_coord);
         aligned_free(matrix->col_coord);
         free(matrix);
+        matrix = 0; //avoids double free's
     }
 }
 
+
+/**
+ * Reads data from matrix market formatted text file into a COOMatrix data structure. This function provides an efficient path to load sparse matrices without allocating the full ncols*nrows buffer, instead using COOMatrix of much fewer i, j, value triplet. It 
+ * is intended for use with sparse matrices only, for dense matrix, please use the Matrix structure and associated read method instead.
+ * 
+ * @param filename the absolute path to the input file
+ * @param typecode pointer to matrix market typecode variable allowing typecode info to be pushed back to calling client
+ * @return NULL a COOMatrix structure containing the input data if successful, otherwise NULL
+ */
 //QC'ed
-//intended for sparse matrices only
 
 COOMatrix* load_coo_matrix(char* filename, MM_typecode* typecode) {
     FILE* file;
@@ -467,12 +486,17 @@ CSRMatrix* coo_to_csr(const COOMatrix* coo_matrix) {
     return csr_matrix;
 }
 
-void print_coo_matrix(const COOMatrix* m, const uint32_t n) {
-    const uint32_t entries = min(n, m->nnz);
-    const char* FORMAT = "\n(%d, %d) -> %.2g";
-    printf("\n***********:: COO Matrix::\n%d rows, %d columns\nPrinting first %d entries:\n", m->nrows, m->ncols, entries);
-    for (uint32_t i = 0; i < entries; i++) {
-        printf(FORMAT, m->row_coord[i], m->col_coord[i], m->values[i]);
-    }
-    printf("\n***********");
-}
+///**
+// * Prints 1 or more entries from a COOMatrix
+// * @param m  pointer to the COOMatrix
+// * @param n the number of entries to print
+// */
+//void print_coo_matrix(const COOMatrix* m, const uint32_t n) {
+//    const uint32_t entries = min(max(n, 1), m->nnz);
+//    const char* FORMAT = "\n(%d, %d) -> %.2g";
+//    printf("\n***********:: COO Matrix::\n%u rows, %u columns\nPrinting first %u entries:\n", m->nrows, m->ncols, entries);
+//    for (uint32_t i = 0; i < entries; i++) {
+//        printf(FORMAT, m->row_coord[i], m->col_coord[i], m->values[i]);
+//    }
+//    printf("\n***********");
+//}

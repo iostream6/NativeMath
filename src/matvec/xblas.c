@@ -3,6 +3,15 @@
  * 2018.04.24  - Implemented multithreaded sparse_sym_matrix_vector_mult using "Effective ranges" method in 2013 paper by Gkountouvas et al
  */
 
+/* 
+ * File:   xblas.c
+ * Author: Ilamah, Osho
+ * 
+ * Provides driver/interface to system optimised BLAS functions (OPENBLAS and MKL backends), as well as custom BLAS routines (e.g. spMVx) 
+ * 
+ * TODO specialize dense matrix blas functions (e.g. mat-vec mult) for symmetric internal memory saving format
+ */
+
 #include <stdint.h>
 #include <stdio.h>
 #include <math.h>
@@ -16,8 +25,6 @@ int SYSMATH_INIT_ = -1;
 int sys_num_threads = 0;
 
 void sparse_sym_matrix_vector_mult_serial();
-
-//TODO specialize dense matrix blas functions (e.g. mat-vec mult) for symmetric internal memory saving format
 
 /**
  * Specifies the number of threads to be used by BLAS backend 
@@ -51,6 +58,7 @@ void initialize_diagonal_matrix(Matrix* D, Vector* v) {
  * @param y
  */
 //QC'ed
+
 void matrix_vector_mult(const Matrix* M, const double* x, double* y) {
     ///\/\/\/\if symmetrix do special
     const double alpha = 1.0, beta = 0.0;
@@ -87,7 +95,8 @@ void sparse_matrix_vector_mult(const CSRMatrix* M, double * x, double * y) {
  * @param M Input symmetric sparse matrix in SSS format
  * @param x Input dense vector
  * @param y Output vector
- */
+ *///QC'ed
+
 void sparse_sym_matrix_vector_mult(const SSSMatrix* M, const double* x, double* y, const uint32_t threads) {
     const uint32_t NUM_THREADS = max(1, threads);
     if (NUM_THREADS == 1) {
@@ -145,6 +154,7 @@ void sparse_sym_matrix_vector_mult(const SSSMatrix* M, const double* x, double* 
 }
 
 //QC'ed
+
 void sparse_sym_matrix_vector_mult_serial(const SSSMatrix* M, const double* x, double* y, const uint32_t NROWS) {
     for (uint32_t row = 0; row < NROWS; row++) {
         y[row] = M->dvalues[row] * x[row];
@@ -165,6 +175,7 @@ void sparse_sym_matrix_vector_mult_serial(const SSSMatrix* M, const double* x, d
  * @param C
  */
 //QC'ed
+
 void matrix_matrix_mult(Matrix* A, Matrix* B, Matrix* C) {
     ///\/\/\/\if symmetrix do special
     const double alpha = 1.0, beta = 0.0;
@@ -179,6 +190,7 @@ void matrix_matrix_mult(Matrix* A, Matrix* B, Matrix* C) {
  * @param C
  */
 //QC'ed
+
 void matrix_transpose_matrix_mult(Matrix* A, Matrix* B, Matrix* C) {
     ///\/\/\/\if symmetrix do special
     const double alpha = 1.0, beta = 0.0;
@@ -193,6 +205,7 @@ void matrix_transpose_matrix_mult(Matrix* A, Matrix* B, Matrix* C) {
  * @param C
  */
 //QC'ed
+
 void matrix_matrix_transpose_mult(Matrix* A, Matrix* B, Matrix* C) {
     ///\/\/\/\if symmetrix do special
     const double alpha = 1.0, beta = 0.0;
@@ -267,6 +280,7 @@ void matrix_copy(Matrix* destination, Matrix* source) {
  * @param vector the vector to polulate
  */
 //QC'ed
+
 void get_matrix_col(Matrix* M, const uint32_t j, Vector* vector) {
     for (uint32_t i = 0; i < M->nrows; i++) {
         vector->data[i] = get_matrix_element(M, i, j);
@@ -322,20 +336,6 @@ double get_matrix_frobenius_norm(Matrix* M) {
     }
     return sqrt(aij_squared);
 }
-
-//double get_matrix_frobenius_norm0(Matrix* M) {
-//    int i;
-//    double val, normval = 0;
-//#pragma omp parallel shared(M,normval) private(i,val) 
-//    {
-//#pragma omp for reduction(+:normval)
-//        for (i = 0; i < ((M->nrows)*(M->ncols)); i++) {
-//            val = M->data[i];
-//            normval += val*val;
-//        }
-//    }
-//    return sqrt(normval);
-//}
 
 #ifdef __SYSMATH_MKL__
 //Using MKL backend
