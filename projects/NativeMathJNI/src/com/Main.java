@@ -1,10 +1,12 @@
 /*
  * 2018.05.01  - Created
+ * 2018.05.05  - Added test methods for symmetric eigs JNI calls
  */
 package com;
 
 import munoor.math.system.COOMatrix;
 import munoor.math.system.Matrix;
+import munoor.math.system.NativeMath;
 import munoor.math.tools.MatrixDataProvider;
 import sun.misc.Unsafe;
 
@@ -13,6 +15,7 @@ import sun.misc.Unsafe;
  * @author Ilamah, Osho
  */
 public class Main {
+
     //private final static Logger LOGGER = Logger.getLogger(Matrix.class.getName());
     static {
         try {
@@ -37,10 +40,9 @@ public class Main {
     public static void main(String[] args) {
         // TODO code application logic here
         //testCreate(); passing
-        
+
         //testReadMatrix();
-        
-        testSparseSymmetricEigs();
+        testSymmetricEigs();
     }
 
     public static void testCreate() {
@@ -120,26 +122,98 @@ public class Main {
         }
     }
 
-    public static void testReadMatrix(){
+    public static void testReadMatrix() {
         //final String filename = "X:\\delete\\x\\Ragusa16\\LFAT5.mtx";
         final String filename = "/media/MERCURY/Samba/DEL/LFAT5.mtx";
         COOMatrix cooMatrix = MatrixDataProvider.readMatrixMarketFile(filename);
-        if(cooMatrix == null){
+        if (cooMatrix == null) {
             System.out.println("Read COO Matrix FAILED!!");
         }
         final Matrix.DenseMatrix dm = MatrixDataProvider.getDenseMatrix(cooMatrix);
         final Matrix.SSSMatrix sm = MatrixDataProvider.getSSSMatrix(cooMatrix);
-        
+
         dm.print(14, 14);
         sm.print(30);
         dm.destroy();
         sm.destroy();
-        
+
         System.out.println("readMatrix passed, please check the printed entries!!");
     }
 
-    
-    public static void testSparseSymmetricEigs(){
-        
+    public static void testSymmetricEigs() {
+        //final String filename = "X:\\delete\\x\\Ragusa16\\LFAT5.mtx";
+        final String sparseSymFilename = "/media/MERCURY/Samba/DEL/Ssym_mat_100.mtx";
+        COOMatrix cooMatrix = MatrixDataProvider.readMatrixMarketFile(sparseSymFilename);
+        if (cooMatrix == null) {
+            System.out.println("Read COO Matrix FAILED!!");
+            return;
+        }
+        System.out.println("=======SPARSE Symmetric EIGS ========================================================::");
+        final Matrix.SSSMatrix sm = MatrixDataProvider.getSSSMatrix(cooMatrix);
+        //determine symmetric eigs using native library
+        final int k = 10;
+        long outputRegisterPointer = NativeMath.allocateAllignedBuffer(2, (int) Matrix.LONG_BYTES, 64);
+        final int sparseSymmResult = NativeMath.sssSparseSymmetricEigs(sm.getValuesBaseAddress(), sm.getDiagonalValuesBaseAddress(), sm.getRowPointerBaseAddress(), sm.getColIndexBaseAddress(), sm.getRows(), sm.getColumns(), sm.getLowerTriangleNonZeroCount(),
+                k, 1 /* LA */, NativeMath.LA_EIGEN_ORDER, outputRegisterPointer);
+
+        if (sparseSymmResult == 0) {
+            System.out.println("Native sparse call completed without errors\nEigen VALUES::");
+            //print eigen values
+            long eigenValueAddress = sm.getLongElementByAddress(outputRegisterPointer);
+            for (int i = 0; i < k; i++) {
+                System.out.print(sm.getDoubleElementByAddress(eigenValueAddress) + "  ");
+                eigenValueAddress += Matrix.LONG_BYTES;
+            }
+            System.out.println("\n\nEigen VECTORS (first K rows of the k columns)::");
+            long eigenVectorsAddress = sm.getLongElementByAddress(outputRegisterPointer + Matrix.LONG_BYTES);
+            for (int i = 0; i < k; i++) {
+                for (int j = 0; j < k; j++) {
+                    System.out.print(sm.getDoubleElementByAddress(eigenVectorsAddress) + "  ");
+                    eigenVectorsAddress += Matrix.DOUBLE_BYTES;
+                }
+                System.out.println();
+            }
+            //Clean up the results
+            NativeMath.releaseRegisters(outputRegisterPointer, 2);
+        } else {
+            System.out.println("Native sparse call FAILED!!!");
+        }
+        //
+        System.out.println("=======DENSE Symmetric EIGS ========================================================::");
+        final String denseSymFilename = "/media/MERCURY/Samba/DEL/Asym_mat_100.mtx";
+        cooMatrix = MatrixDataProvider.readMatrixMarketFile(denseSymFilename);
+        if (cooMatrix == null) {
+            System.out.println("Read COO Matrix FAILED!!");
+            return;
+        }
+        final Matrix.DenseMatrix dm = MatrixDataProvider.getDenseMatrix(cooMatrix);
+
+        outputRegisterPointer = NativeMath.allocateAllignedBuffer(2, (int) Matrix.LONG_BYTES, 64);
+        final int denseSymmResult = NativeMath.symmetricEigs(dm.getValuesBaseAddress(), dm.getRows(), dm.getColumns(), k, NativeMath.LA_EIGEN_ORDER, outputRegisterPointer);
+        if (denseSymmResult == 0) {
+            System.out.println("Native dense call completed without errors\nEigen VALUES::");
+            //print eigen values
+            long eigenValueAddress = dm.getLongElementByAddress(outputRegisterPointer);
+            for (int i = 0; i < k; i++) {
+                System.out.print(dm.getDoubleElementByAddress(eigenValueAddress) + "  ");
+                eigenValueAddress += Matrix.LONG_BYTES;
+            }
+            System.out.println("\n\nEigen VECTORS (first K rows of the k columns)::");
+            long eigenVectorsAddress = dm.getLongElementByAddress(outputRegisterPointer + Matrix.LONG_BYTES);
+            for (int i = 0; i < k; i++) {
+                for (int j = 0; j < k; j++) {
+                    System.out.print(dm.getDoubleElementByAddress(eigenVectorsAddress) + "  ");
+                    eigenVectorsAddress += Matrix.DOUBLE_BYTES;
+                }
+                System.out.println();
+            }
+            //Clean up the results
+            NativeMath.releaseRegisters(outputRegisterPointer, 2);
+        } else {
+            System.out.println("Native dense call FAILED!!!");
+        }
+        dm.destroy();
+        sm.destroy();
+        //System.out.println("readMatrix passed, please check the printed entries!!");
     }
 }

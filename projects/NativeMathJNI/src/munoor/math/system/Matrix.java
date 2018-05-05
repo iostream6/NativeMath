@@ -64,6 +64,11 @@ public abstract class Matrix {
         //NO bound checking, I hope the caller knows what they are doing?
         return unsafe.getInt(address);
     }
+    
+    public final long getLongElementByAddress(final long address) {
+        //NO bound checking, I hope the caller knows what they are doing?
+        return unsafe.getLong(address);
+    }
 
     /**
      * Retrieves the matrix element at the specified coordinates. The coordinates are zero based.

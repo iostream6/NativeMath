@@ -84,7 +84,7 @@ public class MatrixDataProvider {
                 }
                 //process second line
                 String[] dimensions = secondLine.split("\\s+");
-                if (dimensions.length != 3) {
+                if (dimensions.length < 2 || (format == FORMAT.COORDINATE && dimensions.length < 3)) {
                     System.out.println(INVALID_INPUT_FILE_MESSAGE);//invalid header/dimens
                     return null;
                 }
@@ -156,7 +156,8 @@ public class MatrixDataProvider {
                             }
                         }
                     }
-                    if ((symmetric && (nnzr != (ROWS * (ROWS + 1)) / 2)) || (nnzr != (ROWS * COLUMNS))) {
+                    final int expectedEntries = ((ROWS * (ROWS + 1))/2);
+                    if((symmetric && (nnzr != expectedEntries)) || (!symmetric && (nnzr != (ROWS * COLUMNS)))){
                         System.out.println("MatrixMarketReader :: insufficient data entries encountered");
                         return null;
                     }
