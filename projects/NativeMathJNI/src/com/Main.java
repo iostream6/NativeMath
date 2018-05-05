@@ -216,4 +216,8 @@ public class Main {
         sm.destroy();
         //System.out.println("readMatrix passed, please check the printed entries!!");
     }
+
+    public static void testSVD() {
+
+    }
 }
