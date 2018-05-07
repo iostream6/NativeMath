@@ -39,10 +39,23 @@ public class Main {
      */
     public static void main(String[] args) {
         // TODO code application logic here
-        //testCreate(); passing
+        testCreate(); //passing
 
         //testReadMatrix();
-        testSymmetricEigs();
+        //testSymmetricEigs();
+        //testOverflow();
+    }
+
+    private static void testOverflow() {
+        final Matrix.DenseMatrix dm = Matrix.DenseMatrix.create(50000, 50000);
+        if (dm != null) {
+            System.out.println("Create matrix SUCCESS!!\n");
+            //
+            dm.destroy();
+            System.out.println("Delete matrix SUCCESS!!\n");
+        } else {
+            System.out.println("Create matrix FAILED!!\n");
+        }
     }
 
     public static void testCreate() {

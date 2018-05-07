@@ -3,7 +3,7 @@
  * 2017.06.03  - Introduced setThreads method stub
  * 2017.06.15  - Introduced allocateAlligned and freeAlligned
  * 2017.06.25  - Added sparse matrix client side support for Eigen routines
- * 2018.04.29  - SSS dedicated routine. Bulk allocate and release rotuines
+ * 2018.04.29  - SSS dedicated routine. Bulk allocate and release routines
  */
 package munoor.math.system;
 
@@ -73,17 +73,17 @@ public class NativeMath {
      * @param byteAllignment the byte allignment. if zero or negative, 64 bytes alligments is used
      * @return if sucessful, the address of the byte alligned, allocated and cleared memory area is returned, else a zero is returned
      */
-    public static native long allocateAllignedBuffer(int elements, int bytesPerElement, int byteAllignment);
+    public static native long allocateAllignedBuffer(long elements, int bytesPerElement, int byteAllignment);
 
     /**
      * Allocates 1 or more byte alligned memory buffers and clears their contents.
      *
-     * @param elementsPerBuffer an array of integers defining the number of elements expected to be stored in each buffer
+     * @param elementsPerBuffer an array of longs defining the number of elements expected to be stored in each buffer
      * @param bytesPerElement an array of integers defining the bytes required for each element of each of the buffers
      * @param byteAllignment the byte allignment. if zero or negative, 64 bytes alligments is used
      * @return an array of longs where each element is, if sucessful, the address of the byte alligned, allocated and cleared memory buffer, otherwise is a zero value, is returned
      */
-    public static native long[] allocateAllignedBuffers(int[] elementsPerBuffer, int[] bytesPerElement, int byteAllignment);
+    public static native long[] allocateAllignedBuffers(long[] elementsPerBuffer, int[] bytesPerElement, int byteAllignment);
 
     /**
      * Releases a heap memory buffer. The buffer to be released is assumed to have been previously allocated by one of the alligned allocation methods

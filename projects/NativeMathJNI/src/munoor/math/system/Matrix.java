@@ -10,9 +10,8 @@ import java.text.NumberFormat;
 import sun.misc.Unsafe;
 
 /**
- * The backing memory is managed using the Unsafe Java implementation of a matrix of double precision numbers with off-jvm-heap data storage structures. The off-jvm-heap storage structures enable
- * large matrices to be supported and provides more efficient coupling with native math kernels. The backing memory is managed using the Unsafe API. This abstract class provides attributes/methods
- *
+ * Java implementation of a matrix of double precision numbers with off-jvm-heap data storage structures. The off-jvm-heap storage structures enable large matrices to be supported and provides more
+ * efficient coupling with native math kernels. The backing memory is managed using the Unsafe API. This abstract class provides attributes/methods
  *
  * @author Ilamah, Osho
  */
@@ -45,49 +44,37 @@ public abstract class Matrix {
         return valuesBaseAddress;
     }
 
-    public void setDoubleElementByAddress(final long address, final double value) {
+    public static void setDoubleElementByAddress(final long address, final double value) {
         //NO bound checking, I hope the caller knows what they are doing?
         unsafe.putDouble(address, value);
     }
 
-    public final double getDoubleElementByAddress(final long address) {
+    public static final double getDoubleElementByAddress(final long address) {
         //NO bound checking, I hope the caller knows what they are doing?
         return unsafe.getDouble(address);
     }
-    
-    public void setIntElementByAddress(final long address, final int value) {
+
+    public static void setIntElementByAddress(final long address, final int value) {
         //NO bound checking, I hope the caller knows what they are doing?
         unsafe.putInt(address, value);
     }
 
-    public final int getIntElementByAddress(final long address) {
+    public static final int getIntElementByAddress(final long address) {
         //NO bound checking, I hope the caller knows what they are doing?
         return unsafe.getInt(address);
     }
-    
-    public final long getLongElementByAddress(final long address) {
+
+    public static void setLongElementByAddress(final long address, final long value) {
+        //NO bound checking, I hope the caller knows what they are doing?
+        unsafe.putLong(address, value);
+    }
+
+    public static final long getLongElementByAddress(final long address) {
         //NO bound checking, I hope the caller knows what they are doing?
         return unsafe.getLong(address);
     }
 
-    /**
-     * Retrieves the matrix element at the specified coordinates. The coordinates are zero based.
-     *
-     * @param i
-     * @param j
-     * @return
-     */
-    public abstract double getElementByCoordinates(final int i, int j);
-
-    /**
-     * Sets the matrix element at the specified coordinates. The coordinates are zero based.
-     *
-     * @param i
-     * @param j
-     * @param value
-     */
-    public abstract void setElementByCoordinates(final int i, final int j, final double value);
-
+//    public abstract void setElementByCoordinates(final int i, final int j, final double value);
     //public abstract void print(final int maxRow, final int maxCol);
     //package constructor!! blocked from outside world
     Matrix(int rows, int columns, long baseAddress) {
@@ -95,6 +82,8 @@ public abstract class Matrix {
         this.columns = columns;
         this.valuesBaseAddress = baseAddress;
     }
+
+    public abstract void destroy();
 
     /**
      * Direct memory (off-heap) implementation of a row-major dense matrix of double precision numbers. The backing memory is managed using the Unsafe API
@@ -107,7 +96,13 @@ public abstract class Matrix {
             super(rows, columns, baseAddress);
         }
 
-        @Override
+        /**
+         * Retrieves the matrix element at the specified coordinates. The coordinates are zero based.
+         *
+         * @param i
+         * @param j
+         * @return
+         */
         public final double getElementByCoordinates(int i, int j) {
             //NO bound checking, I hope the caller knows what they are doing?
             //return M->data[row_num * (M->ncols) + col_num];
@@ -115,7 +110,13 @@ public abstract class Matrix {
             return unsafe.getDouble(address);
         }
 
-        @Override
+        /**
+         * Sets the matrix element at the specified coordinates. The coordinates are zero based.
+         *
+         * @param i
+         * @param j
+         * @param value
+         */
         public final void setElementByCoordinates(int i, int j, double value) {
             //NO bound checking, I hope the caller knows what they are doing?
             final long address = (((i * columns) + j) * DOUBLE_BYTES) + valuesBaseAddress;
@@ -127,7 +128,7 @@ public abstract class Matrix {
                 if (m > 0 && n > 0) {
                     getUnsafe();
                     //final long baseAddress = unsafe.allocateMemory(size);
-                    final long baseAddress = NativeMath.allocateAllignedBuffer(m * n, (int) DOUBLE_BYTES, DEFAULT_ALIGNMENT);//    allocateAlligned(size, DEFAULT_ALIGNMENT);
+                    final long baseAddress = NativeMath.allocateAllignedBuffer(((long) m) * n /* ensure long multiplication  */, (int) DOUBLE_BYTES, DEFAULT_ALIGNMENT);//    allocateAlligned(size, DEFAULT_ALIGNMENT);
                     if (baseAddress == 0) {
                         throw new RuntimeException("Native Matrix could not allocate sufficient memory!!");
                     }
@@ -160,6 +161,7 @@ public abstract class Matrix {
             System.out.print("\n\n");
         }
 
+        @Override
         public void destroy() {
             NativeMath.releaseAllignedBuffer(valuesBaseAddress);
         }
@@ -178,22 +180,12 @@ public abstract class Matrix {
             this.rowPointerBaseAddress = rowPointerBaseAddress;
         }
 
-        @Override
-        public final double getElementByCoordinates(int i, int j) {
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-        }
-
-        @Override
-        public final void setElementByCoordinates(int i, int j, double value) {
-            throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
-        }
-
         public final static SSSMatrix create(final int m, final int n, final int nnzl) {
             try {
                 if (m > 0 && n > 0) {
                     getUnsafe();
                     final int[] bytesPerElement = {(int) DOUBLE_BYTES, (int) DOUBLE_BYTES, (int) INT_BYTES, (int) INT_BYTES};
-                    final int[] elementsPerBuffer = {m, nnzl, nnzl, m + 1};
+                    final long[] elementsPerBuffer = {m, nnzl, nnzl, m + 1};
                     //cross layer once!
                     final long[] addresses = NativeMath.allocateAllignedBuffers(elementsPerBuffer, bytesPerElement, DEFAULT_ALIGNMENT);
                     for (int i = 0; i < addresses.length; i++) {
@@ -261,6 +253,7 @@ public abstract class Matrix {
             return rowPointerBaseAddress;
         }
 
+        @Override
         public void destroy() {
             final long[] pointers = {valuesBaseAddress, diagonalValuesBaseAddress, colIndexBaseAddress, rowPointerBaseAddress};
             NativeMath.releaseAllignedBuffers(pointers);
