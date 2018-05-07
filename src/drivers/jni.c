@@ -5,6 +5,7 @@
  * 2017.06.15  - Introduced Java_munoor_math_system_MatrixUtils_allocateAlligned and Java_munoor_math_system_MatrixUtils_freeAlligned
  * 2017.06.25  - Added basic sparse matrix support for Eigen routines
  * 2018.04.30  - Restructure and introduce SSS support. Added bulk allocate. Rename methods/Java class. Overall QC required
+ * 2018.05.06  - Release buffer and variants will check from pointer > 0 before executes
  */
 /* 
  * File:   jni.c
@@ -37,6 +38,7 @@
  * Signature: (JJJJIIIIIJ)I
  */
 //QC'ed
+
 /*JNIEXPORT*/ jint JNICALL Java_munoor_math_system_NativeMath_sssSparseSymmetricEigs(JNIEnv* env, jclass class, jlong values_pointer, jlong dvalues_pointer, jlong row_pointer, jlong col_index_pointer, jint m, jint n, jint nnzl,
         jint k, jint o, jint threads, jlong outputPtr) {
     sysmath_init();
@@ -112,6 +114,7 @@
  * Signature: (JIIIIJ)I
  */
 //QC'ed
+
 /*JNIEXPORT*/ jint JNICALL Java_munoor_math_system_NativeMath_symmetricEigs(JNIEnv* env, jclass class, jlong values_pointer, jint m, jint n, jint k, jint o, jlong outputPtr) {
     sysmath_init();
     //Sanity checks expected to have been done in JVM layer. The below is based on codes from test_eigen_arpack() function in SysMathTest
@@ -185,10 +188,13 @@
  * Signature: (JI)V
  */
 //QC'ed
+
 /*JNIEXPORT*/ void JNICALL Java_munoor_math_system_NativeMath_releaseRegisters(JNIEnv* env, jclass class, jlong registersPtr, jint numberofRegisters) {
-    jlong * memRegisterPtr = (jlong*) registersPtr; //need this to be java longs to deal with LLP64 and LP64
+    jlong* memRegisterPtr = (jlong*) registersPtr; //need this to be java longs to deal with LLP64 and LP64
     for (int index = 0; index < numberofRegisters; index++) {
-        aligned_free((void *) memRegisterPtr[index]);
+        if( memRegisterPtr[index] > 0){
+            aligned_free((void *) memRegisterPtr[index]);
+        }
     }
 }
 
@@ -198,6 +204,7 @@
  * Signature: (I)V
  */
 //QC'ed
+
 /*JNIEXPORT*/ void JNICALL Java_munoor_math_system_NativeMath_setKernelThreads(JNIEnv* env, jclass class, jint numThreads) {
     set_system_num_threads(numThreads);
 }
@@ -208,7 +215,8 @@
  * Signature: (III)J
  */
 //QC'ed
-/*JNIEXPORT*/ jlong JNICALL Java_munoor_math_system_NativeMath_allocateAllignedBuffer(JNIEnv* env, jclass class, jint elements, jint bytes_per_element, jint byte_allignment) {
+
+/*JNIEXPORT*/ jlong JNICALL Java_munoor_math_system_NativeMath_allocateAllignedBuffer(JNIEnv* env, jclass class, jlong elements, jint bytes_per_element, jint byte_allignment) {
     return (jlong) (aligned_calloc(elements, bytes_per_element, byte_allignment));
 }
 
@@ -218,24 +226,25 @@
  * Signature: ([I[II)[J
  */
 //QC'ed
-/*JNIEXPORT*/ jlongArray JNICALL Java_munoor_math_system_NativeMath_allocateAllignedBuffers(JNIEnv* env, jclass class, jintArray elements_per_buffer, jintArray bytes_per_element, jint byte_allignment) {
+
+/*JNIEXPORT*/ jlongArray JNICALL Java_munoor_math_system_NativeMath_allocateAllignedBuffers(JNIEnv* env, jclass class, jlongArray elements_per_buffer, jintArray bytes_per_element, jint byte_allignment) {
     const jsize len = (*env)->GetArrayLength(env, elements_per_buffer);
     //allocate C buffer for the inputs (all on stack)
-    jint c_elements_per_buffer[len];
+    jlong c_elements_per_buffer[len];
     jint c_bytes_per_element[len];
     //allocate C buffer for the output
     jlong c_created_buffer_address[len];
     //
     //copy the JVM array into C - this makes sense as the array is small (see JNI book)
-    (*env)->GetIntArrayRegion(env, elements_per_buffer, 0, len, c_elements_per_buffer);
+    (*env)->GetLongArrayRegion(env, elements_per_buffer, 0, len, c_elements_per_buffer);
     (*env)->GetIntArrayRegion(env, bytes_per_element, 0, len, c_bytes_per_element);
     //do the allocation
-    for(int i = 0; i < len; i++){
+    for (int i = 0; i < len; i++) {
         jlong address = (jlong) (aligned_calloc(c_elements_per_buffer[i], c_bytes_per_element[i], byte_allignment));
         c_created_buffer_address[i] = address;
     }
     //create a result array in the JVM
-    jlongArray results=(jlongArray)(*env)->NewLongArray(env,len);
+    jlongArray results = (jlongArray) (*env)->NewLongArray(env, len);
     //copy the c results buffer back into JVM
     (*env)->SetLongArrayRegion(env, results, 0, len, c_created_buffer_address);
     return results;
@@ -247,9 +256,12 @@
  * Signature: (J)V
  */
 //QC'ed
+
 /*JNIEXPORT*/ void JNICALL Java_munoor_math_system_NativeMath_releaseAllignedBuffer(JNIEnv* env, jclass class, jlong pointer) {
-    void* memRegisterPtr = (void*) pointer; //need this to be java longs to deal with LLP64 and LP64
-    aligned_free(memRegisterPtr);
+    if(pointer > 0){
+        void* memRegisterPtr = (void*) pointer; //need this to be java longs to deal with LLP64 and LP64
+        aligned_free(memRegisterPtr);
+    }    
 }
 
 /*
@@ -258,7 +270,8 @@
  * Signature: ([J)V
  */
 //QC'ed
-/*JNIEXPORT*/ void JNICALL Java_munoor_math_system_NativeMath_releaseAllignedBuffers(JNIEnv* env, jclass class, jlongArray pointers){
+
+/*JNIEXPORT*/ void JNICALL Java_munoor_math_system_NativeMath_releaseAllignedBuffers(JNIEnv* env, jclass class, jlongArray pointers) {
     const jsize len = (*env)->GetArrayLength(env, pointers);
     //allocate C buffer for the input (all on stack)
     jlong c_pointers[len];
@@ -267,9 +280,12 @@
     (*env)->GetLongArrayRegion(env, pointers, 0, len, c_pointers);
     //
     //perform the release operation
-    for(int i = 0; i < len; i++){
-        void* memRegisterPtr = (void*) c_pointers[i]; //need this to be java longs to deal with LLP64 and LP64
-        aligned_free(memRegisterPtr);
+    for (int i = 0; i < len; i++) {
+        if (c_pointers[i] > 0) {
+            void* memRegisterPtr = (void*) c_pointers[i]; //need this to be java longs to deal with LLP64 and LP64
+            aligned_free(memRegisterPtr);
+        }
+
     }
 }
 

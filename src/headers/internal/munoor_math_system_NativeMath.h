@@ -61,7 +61,7 @@ extern "C" {
  * Signature: (III)J
  */
 /*JNIEXPORT*/ jlong JNICALL Java_munoor_math_system_NativeMath_allocateAllignedBuffer
-  (JNIEnv *, jclass, jint, jint, jint);
+  (JNIEnv *, jclass, jlong, jint, jint);
 
 /*
  * Class:     munoor_math_system_NativeMath
@@ -69,7 +69,7 @@ extern "C" {
  * Signature: ([I[II)[J
  */
 /*JNIEXPORT*/ jlongArray JNICALL Java_munoor_math_system_NativeMath_allocateAllignedBuffers
-  (JNIEnv *, jclass, jintArray, jintArray, jint);
+  (JNIEnv *, jclass, jlongArray, jintArray, jint);
 
 /*
  * Class:     munoor_math_system_NativeMath
